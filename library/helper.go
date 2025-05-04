@@ -1,0 +1,45 @@
+
+package library
+
+import (
+	"log"
+	"net/http"
+	"text/template"
+)
+
+type AppHandler func(http.ResponseWriter, *http.Request) (int, error)
+type ErrorHandlerOptions struct {
+	Templates *template.Template
+}
+
+func (fn AppHandler) CreateHandler(opts ErrorHandlerOptions) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		statusCode, err := fn(w, r)
+		if err == nil {
+			return 
+		}
+		log.Printf("[ERROR] %s %s => %d: %v", r.Method, r.URL.Path, statusCode, err)
+		if opts.Templates != nil {
+			w.WriteHeader(statusCode)
+			tmplErr := opts.Templates.ExecuteTemplate(w, "error.html", map[string]any{
+				"Title": "Error",
+				"Error": err.Error(),
+			})
+			if tmplErr != nil {
+				log.Printf("[ERROR] Failed to render error.html: %v", tmplErr)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			}
+			return
+		}
+		http.Error(w, http.StatusText(statusCode), statusCode)
+	}
+}
+
+
+func FileServerWithLog(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[STATIC] Serving file: %s", r.URL.Path)
+		next.ServeHTTP(w, r)
+	})
+}
+
