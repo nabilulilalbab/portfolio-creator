@@ -1,0 +1,38 @@
+package main
+
+import (
+	"embed"
+	"log"
+	"net/http"
+	"os"
+
+	"github.com/nabilulilalbab/library"
+	"github.com/nabilulilalbab/storageService/handler"
+)
+
+//go:embed static
+var staticFS embed.FS
+
+
+// var Mytemplate = template.Must(template.New("").ParseFS(staticFS,"static"))
+
+
+func main()  {
+  //working direktory
+	wd, _ := os.Getwd()
+	log.Println(wd)
+
+ 	mux := http.NewServeMux()
+	fileserver := http.FileServer(http.FS(staticFS))
+	mux.Handle("/static/",library.FileServerWithLog(fileserver))
+	mux.HandleFunc("/", library.AppHandler(handler.IndexHandler).CreateHandler(library.ErrorHandlerOptions{
+		Templates: handler.Templates,
+	}))
+
+		mux.HandleFunc("/error", library.AppHandler(handler.ErrorSimulasi).CreateHandler(library.ErrorHandlerOptions{
+		Templates: handler.Templates,
+	}))
+
+	panic(http.ListenAndServe(":8080", mux))
+	
+}

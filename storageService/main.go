@@ -2,62 +2,46 @@ package main
 
 import (
 	"embed"
-	"fmt"
+	"log"
 	"net/http"
-	"text/template"
+	"os"
 
 	"github.com/nabilulilalbab/library"
+	"github.com/nabilulilalbab/storageService/handler"
 )
 
-//go:embed static
-var staticFS embed.FS
+//go:embed static templates/*.html
+var appFS embed.FS
 
-var templates = template.Must(template.ParseGlob("templates/*.html"))
+func main() {
+	// Working directory
+	wd, _ := os.Getwd()
+	log.Println("Working directory:", wd)
 
-// var Mytemplate = template.Must(template.New("").ParseFS(staticFS,"static"))
-
-func indexHandler(w http.ResponseWriter, r *http.Request) (int, error) {
-	err := templates.ExecuteTemplate(w, "index.html", map[string]any{
-		"Title": "My Home Page",
-	})
+	// Inisialisasi template dari embedded filesystem
+	templates, err := handler.InitTemplates(appFS)
 	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("failed rendering index: %w", err)
-	}
-	return http.StatusOK, nil
-}
-
-
-
-
-func errorSimulasi(w http.ResponseWriter, r *http.Request) (int, error) {
-	if r.URL.Query().Get("error") == "true" {
-		return http.StatusInternalServerError, fmt.Errorf("simulated internal error")
+		log.Fatalf("Error initializing templates: %v", err)
 	}
 
-	err := templates.ExecuteTemplate(w, "index.html", map[string]any{
-		"Title": "My Home Page",
-	})
-	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("failed rendering index: %w", err)
-	}
-	return http.StatusOK, nil
-}
-
-
-
-
-func main()  {
- 	mux := http.NewServeMux()
-	fileserver := http.FileServer(http.FS(staticFS))
-	mux.Handle("/static/",library.FileServerWithLog(fileserver))
-	mux.HandleFunc("/", library.AppHandler(indexHandler).CreateHandler(library.ErrorHandlerOptions{
-		Templates: templates,
-	}))
-
-		mux.HandleFunc("/error", library.AppHandler(errorSimulasi).CreateHandler(library.ErrorHandlerOptions{
-		Templates: templates,
-	}))
-
-	panic(http.ListenAndServe(":8080", mux))
+	mux := http.NewServeMux()
 	
+	// Serve static files
+	fileserver := http.FileServer(http.FS(appFS))
+	mux.Handle("/static/", library.FileServerWithLog(fileserver))
+	
+	// Handle routes with error handling middleware
+	mux.HandleFunc("/", library.AppHandler(handler.IndexHandler).CreateHandler(library.ErrorHandlerOptions{
+		Templates: templates,
+	}))
+
+	mux.HandleFunc("/error", library.AppHandler(handler.ErrorSimulasi).CreateHandler(library.ErrorHandlerOptions{
+		Templates: templates,
+	}))
+
+	// Start server with proper error handling
+	log.Println("Server started on :8080")
+	if err := http.ListenAndServe(":8080", mux); err != nil {
+		log.Fatalf("Server failed: %v", err)
+	}
 }
