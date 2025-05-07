@@ -2,11 +2,10 @@ package library
 
 import (
 	"embed"
-	"text/template"
+	"html/template" // Ganti text/template ke html/template
 )
 
-
-
-func Mytemplate(fs embed.FS, name string) *template.Template {
-	return template.Must(template.New("").ParseFS(fs, name))
+// MyTemplate membuat template baru dari embedded filesystem
+func MyTemplate(fs embed.FS, pattern string) *template.Template {
+	return template.Must(template.New("").ParseFS(fs, pattern))
 }

@@ -1,9 +1,10 @@
+
 package library
 
 import (
-	"html/template" // Ganti text/template ke html/template
 	"log"
 	"net/http"
+	"html/template"
 )
 
 type AppHandler func(http.ResponseWriter, *http.Request) (int, error)
@@ -34,9 +35,11 @@ func (fn AppHandler) CreateHandler(opts ErrorHandlerOptions) http.HandlerFunc {
 	}
 }
 
+
 func FileServerWithLog(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[STATIC] Serving file: %s", r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
 }
+
